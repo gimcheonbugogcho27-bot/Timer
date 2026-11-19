@@ -33,6 +33,7 @@
 - `ClassTimer-Portable.exe` – 설치 없이 실행 (Windows)
 - `ClassTimer-Setup.exe` – 설치형 (Windows)
 - `ClassTimer.apk` – 안드로이드
+- `ClassTimer-InstallGuide.zip` – 설치 가이드 (PC · 안드로이드 · 아이폰, A4 인쇄용 이미지)
 
 **아이폰·설치 없이 쓰기: https://gimcheonbugogcho27-bot.github.io/Timer/**
 사파리에서 열고 공유 → 홈 화면에 추가 (앱이 화면에 켜져 있을 때만 알람이 울려요)
