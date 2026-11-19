@@ -41,7 +41,7 @@
    - `우리반타이머-android`: `ClassTimer.apk` (휴대폰·태블릿에 설치, 실행 중 화면 꺼짐 방지)
 
 > 수동 실행: Actions 탭 → Build EXE & APK → **Run workflow**
-> 릴리스로 올리기: `v1.0.0` 같은 태그를 푸시하면 Releases에 exe·apk가 첨부됩니다.
+> 릴리스: main에 올릴 때마다 `package.json`의 version(예: 1.0.0)으로 릴리스가 자동으로 만들어지거나 갱신됩니다. 새 버전으로 따로 남기려면 version을 올리세요.
 > apk 설치 시 "출처를 알 수 없는 앱" 설치를 허용해야 합니다.
 
 ※ 서명 없는 exe라 처음 실행할 때 Windows가 "PC 보호" 창을 띄우면 **추가 정보 → 실행**을 누르세요.
