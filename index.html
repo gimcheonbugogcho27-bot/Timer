@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리반타이머</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --text:#f8fafc; --muted:#94a3b8;
+    --accent:#38bdf8; --green:#22c55e; --yellow:#facc15; --red:#ef4444; --orange:#fb923c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--text);font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",sans-serif;
+       display:flex;flex-direction:column;overflow:hidden;user-select:none}
+  .num{font-family:"Consolas","Segoe UI Mono","Roboto Mono",monospace;font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:-0.02em}
+
+  /* 탭 */
+  nav{display:flex;gap:.5rem;padding:.6rem .8rem;background:#0b1222;align-items:center}
+  nav button.tab{flex:1;font-size:clamp(1.1rem,2.4vw,2rem);font-weight:800;padding:.6rem .4rem;border:0;border-radius:14px;
+       background:var(--panel);color:var(--muted);cursor:pointer;font-family:inherit}
+  nav button.tab.on{background:var(--accent);color:#0b1222}
+  nav .fs{flex:0 0 auto;font-size:clamp(1rem,2vw,1.6rem);padding:.6rem 1rem;border:0;border-radius:14px;background:var(--panel2);color:var(--text);cursor:pointer}
+
+  main{flex:1;position:relative;overflow:hidden}
+  section{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:1vh 1rem;gap:min(1.2rem,2.2vh)}
+  section.on{display:flex}
+
+  .big{font-size:clamp(3rem,min(19vw,30vh),26rem);line-height:1}
+  .mid{font-size:clamp(2rem,min(9vw,15vh),10rem);line-height:1}
+  .label{font-size:clamp(1rem,min(3vw,4.5vh),2.6rem);color:var(--muted);font-weight:700}
+
+  .btns{display:flex;flex-wrap:wrap;gap:.8rem;justify-content:center}
+  .btn{font-size:clamp(1.1rem,min(3.2vw,5vh),3rem);font-weight:800;padding:.5em 1.2em;border:0;border-radius:18px;cursor:pointer;
+       font-family:inherit;color:#0b1222;background:var(--accent);min-width:4.5em}
+  .btn.g{background:var(--green)} .btn.y{background:var(--yellow)} .btn.r{background:var(--red);color:#fff}
+  .btn.s{background:var(--panel2);color:var(--text)}
+  .btn:active{transform:scale(.96)}
+  .chip{font-size:clamp(1rem,min(2.6vw,4vh),2.4rem);font-weight:800;padding:.35em .8em;border:0;border-radius:14px;cursor:pointer;
+        background:var(--panel2);color:var(--text);font-family:inherit}
+  .chip:active{transform:scale(.96)}
+
+  /* 시계 */
+  #clock .date{font-size:clamp(1.2rem,min(4vw,6vh),4rem);font-weight:800;color:var(--accent)}
+  #clock .ampm{font-size:.3em;color:var(--muted);margin-right:.15em;vertical-align:.9em}
+  .world{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;width:100%;max-width:1800px}
+  .city{background:var(--panel);border-radius:18px;padding:min(.7rem,1vh) .7rem;text-align:center}
+  .city .n{font-size:clamp(.9rem,min(2.2vw,3.2vh),2.2rem);font-weight:800}
+  .city .t{font-size:clamp(1.6rem,min(5.5vw,8vh),6rem);line-height:1.1}
+  .city .d{font-size:clamp(.9rem,1.6vw,1.6rem);color:var(--muted)}
+  .city.night .t{color:#a5b4fc}
+  .city.day .t{color:var(--yellow)}
+
+  /* 타이머 */
+  #timer .disp{transition:color .3s}
+  #timer .disp.warn{color:var(--orange)}
+  #timer .disp.last{color:var(--red)}
+  .bar{flex:0 0 auto;width:min(92%,1600px);height:clamp(14px,2.5vh,32px);background:var(--panel);border-radius:99px;overflow:hidden}
+  .bar>div{height:100%;width:100%;background:var(--green);transition:width .2s linear,background .3s}
+  .adj{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+
+  /* 스톱워치 */
+  .laps{width:min(92%,1100px);max-height:28vh;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.5rem}
+  .lap{background:var(--panel);border-radius:12px;padding:.4rem .8rem;display:flex;justify-content:space-between;align-items:baseline;
+       font-size:clamp(1.2rem,2.6vw,2.4rem)}
+  .lap b{color:var(--muted);font-size:.7em}
+  .cs{font-size:.5em;color:var(--muted)}
+
+  /* 알람 */
+  .setrow{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;justify-content:center}
+  .spin{display:flex;flex-direction:column;align-items:center;gap:.3rem}
+  .spin .chip{width:3.2em}
+  .alist{width:min(94%,1400px);display:flex;flex-direction:column;gap:.6rem;max-height:34vh;overflow:auto}
+  .al{background:var(--panel);border-radius:16px;padding:.5rem 1rem;display:flex;align-items:center;gap:1rem}
+  .al .t{font-size:clamp(2rem,5vw,5rem)}
+  .al .m{flex:1;font-size:clamp(1.1rem,2.6vw,2.4rem);font-weight:700}
+  .al.off{opacity:.4}
+  input.memo{font-size:clamp(1.1rem,2.6vw,2.4rem);padding:.4em .6em;border-radius:14px;border:2px solid var(--panel2);
+             background:var(--panel);color:var(--text);font-family:inherit;width:min(80vw,14em)}
+
+  /* 울림 화면 */
+  #ring{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:2rem;z-index:50;
+        background:var(--red);cursor:pointer;animation:flash 1s infinite}
+  #ring.on{display:flex}
+  #ring .msg{font-size:clamp(4rem,16vw,18rem);font-weight:900;text-align:center;line-height:1.05}
+  #ring .sub{font-size:clamp(1.5rem,4vw,4rem);font-weight:800}
+  @keyframes flash{0%,100%{background:#dc2626}50%{background:#f97316}}
+
+  @media (max-width:900px){ .world{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+<nav>
+  <button class="tab on" data-t="clock">🕐 시계</button>
+  <button class="tab" data-t="stopwatch">⏱ 스톱워치</button>
+  <button class="tab" data-t="timer">⏳ 타이머</button>
+  <button class="tab" data-t="alarm">⏰ 알람</button>
+  <button class="fs" id="fsBtn" title="전체화면 (F11)">⛶</button>
+</nav>
+
+<main>
+  <!-- 시계 + 세계시각 -->
+  <section id="clock" class="on">
+    <div class="date" id="cDate"></div>
+    <div class="big num" id="cTime"></div>
+    <div class="world" id="world"></div>
+  </section>
+
+  <!-- 스톱워치 -->
+  <section id="stopwatch">
+    <div class="label">스톱워치</div>
+    <div class="big num" id="swDisp">00:00<span class="cs">.00</span></div>
+    <div class="btns">
+      <button class="btn g" id="swStart">시작</button>
+      <button class="btn s" id="swLap">기록</button>
+      <button class="btn r" id="swReset">초기화</button>
+    </div>
+    <div class="laps" id="laps"></div>
+  </section>
+
+  <!-- 타이머 -->
+  <section id="timer">
+    <div class="label" id="tmLabel">타이머</div>
+    <div class="big num disp" id="tmDisp">05:00</div>
+    <div class="bar"><div id="tmBar"></div></div>
+    <div class="adj" id="tmAdj">
+      <button class="chip" data-add="-600">-10분</button>
+      <button class="chip" data-add="-60">-1분</button>
+      <button class="chip" data-add="-10">-10초</button>
+      <button class="chip" data-add="10">+10초</button>
+      <button class="chip" data-add="60">+1분</button>
+      <button class="chip" data-add="600">+10분</button>
+    </div>
+    <div class="adj" id="tmPre">
+      <button class="chip" data-set="30">30초</button>
+      <button class="chip" data-set="60">1분</button>
+      <button class="chip" data-set="180">3분</button>
+      <button class="chip" data-set="300">5분</button>
+      <button class="chip" data-set="600">10분</button>
+      <button class="chip" data-set="900">15분</button>
+      <button class="chip" data-set="1200">20분</button>
+      <button class="chip" data-set="2400">40분</button>
+    </div>
+    <div class="btns">
+      <button class="btn g" id="tmStart">시작</button>
+      <button class="btn r" id="tmReset">초기화</button>
+    </div>
+  </section>
+
+  <!-- 알람 -->
+  <section id="alarm">
+    <div class="label">알람 맞추기</div>
+    <div class="setrow">
+      <div class="spin">
+        <button class="chip" data-h="1">▲</button>
+        <div class="mid num" id="aH">09</div>
+        <button class="chip" data-h="-1">▼</button>
+      </div>
+      <div class="mid num">:</div>
+      <div class="spin">
+        <button class="chip" data-m="5">▲</button>
+        <div class="mid num" id="aM">00</div>
+        <button class="chip" data-m="-5">▼</button>
+      </div>
+    </div>
+    <div class="setrow">
+      <input class="memo" id="aMemo" placeholder="메모 (예: 쉬는 시간 끝)" maxlength="20">
+      <button class="btn g" id="aAdd">알람 추가</button>
+    </div>
+    <div class="alist" id="aList"></div>
+  </section>
+</main>
+
+<div id="ring">
+  <div class="msg" id="ringMsg">시간 끝!</div>
+  <div class="sub">화면을 누르면 멈춰요</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+
+/* ---------- 탭 ---------- */
+document.querySelectorAll('nav .tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav .tab').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('on', s.id === b.dataset.t));
+});
+$('fsBtn').onclick = () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+};
+
+/* ---------- 소리 ---------- */
+let actx = null;
+function audio() {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+document.addEventListener('pointerdown', () => audio(), { once: true });
+function beep(freq = 880, dur = 0.18, when = 0, vol = 0.5) {
+  const a = audio(), o = a.createOscillator(), g = a.createGain();
+  o.type = 'square'; o.frequency.value = freq;
+  const t = a.currentTime + when;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01);
+  g.gain.setValueAtTime(vol, t + dur - 0.03); g.gain.linearRampToValueAtTime(0, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+let ringTimer = null;
+function startRing(msg) {
+  $('ringMsg').textContent = msg;
+  $('ring').classList.add('on');
+  const pattern = () => { beep(988,.15,0); beep(988,.15,.22); beep(988,.15,.44); beep(1319,.3,.66); };
+  pattern(); clearInterval(ringTimer); ringTimer = setInterval(pattern, 1500);
+}
+function stopRing() { clearInterval(ringTimer); ringTimer = null; $('ring').classList.remove('on'); }
+$('ring').onclick = stopRing;
+
+/* ---------- 시계 + 세계시각 ---------- */
+const CITIES = [
+  ['🇰🇷 서울','Asia/Seoul'], ['🇯🇵 도쿄','Asia/Tokyo'], ['🇨🇳 베이징','Asia/Shanghai'], ['🇮🇳 뉴델리','Asia/Kolkata'],
+  ['🇬🇧 런던','Europe/London'], ['🇫🇷 파리','Europe/Paris'], ['🇺🇸 뉴욕','America/New_York'], ['🇦🇺 시드니','Australia/Sydney']
+];
+const DAYS = ['일','월','화','수','목','금','토'];
+function partsIn(tz, d) {
+  const f = new Intl.DateTimeFormat('en-US', { timeZone: tz, year:'numeric', month:'numeric', day:'numeric',
+    hour:'numeric', minute:'numeric', second:'numeric', hourCycle:'h23', weekday:'short' });
+  const o = {}; f.formatToParts(d).forEach(p => o[p.type] = p.value);
+  return { y:+o.year, mo:+o.month, d:+o.day, h:+o.hour % 24, m:+o.minute, s:+o.second };
+}
+$('world').innerHTML = CITIES.map((c,i) =>
+  `<div class="city" id="city${i}"><div class="n">${c[0]}</div><div class="t num"></div><div class="d"></div></div>`).join('');
+function tickClock() {
+  const now = new Date();
+  const h = now.getHours();
+  $('cDate').textContent = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${DAYS[now.getDay()]}요일`;
+  $('cTime').innerHTML = `<span class="ampm">${h < 12 ? '오전' : '오후'}</span>${pad(h % 12 || 12)}:${pad(now.getMinutes())}<span class="cs">:${pad(now.getSeconds())}</span>`;
+  const here = partsIn(Intl.DateTimeFormat().resolvedOptions().timeZone, now);
+  const hereDay = Date.UTC(here.y, here.mo-1, here.d);
+  CITIES.forEach((c,i) => {
+    const p = partsIn(c[1], now), el = $('city'+i);
+    el.querySelector('.t').textContent = `${pad(p.h)}:${pad(p.m)}`;
+    const diffDay = Math.round((Date.UTC(p.y, p.mo-1, p.d) - hereDay) / 864e5);
+    const dayTxt = diffDay === 0 ? '오늘' : diffDay > 0 ? '내일' : '어제';
+    el.querySelector('.d').textContent = `${p.mo}/${p.d} ${dayTxt} · ${p.h >= 6 && p.h < 18 ? '☀️ 낮' : '🌙 밤'}`;
+    el.classList.toggle('day', p.h >= 6 && p.h < 18);
+    el.classList.toggle('night', !(p.h >= 6 && p.h < 18));
+  });
+  checkAlarms(now);
+}
+
+/* ---------- 스톱워치 ---------- */
+let swRun = false, swBase = 0, swAcc = 0, laps = [];
+function swNow() { return swAcc + (swRun ? performance.now() - swBase : 0); }
+function fmtSW(ms, withCs = true) {
+  const t = Math.floor(ms / 10), cs = t % 100, s = Math.floor(t / 100) % 60, m = Math.floor(t / 6000) % 60, h = Math.floor(t / 360000);
+  const main = (h ? h + ':' + pad(m) : pad(m)) + ':' + pad(s);
+  return withCs ? `${main}<span class="cs">.${pad(cs)}</span>` : main;
+}
+function drawSW() { $('swDisp').innerHTML = fmtSW(swNow()); }
+$('swStart').onclick = () => {
+  if (swRun) { swAcc += performance.now() - swBase; swRun = false; }
+  else { swBase = performance.now(); swRun = true; }
+  $('swStart').textContent = swRun ? '멈춤' : '시작';
+  $('swStart').className = 'btn ' + (swRun ? 'y' : 'g');
+};
+$('swLap').onclick = () => {
+  const t = swNow(); if (!t) return;
+  laps.unshift(t); drawLaps();
+};
+$('swReset').onclick = () => {
+  swRun = false; swAcc = 0; laps = []; drawLaps(); drawSW();
+  $('swStart').textContent = '시작'; $('swStart').className = 'btn g';
+};
+function drawLaps() {
+  $('laps').innerHTML = laps.map((t,i) => `<div class="lap"><b>${laps.length - i}번</b><span class="num">${fmtSW(t)}</span></div>`).join('');
+}
+
+/* ---------- 타이머 ---------- */
+let tmSet = 300, tmLeft = 300, tmRun = false, tmEnd = 0;
+function tmRemaining() { return tmRun ? Math.max(0, (tmEnd - Date.now()) / 1000) : tmLeft; }
+function fmtTM(sec) {
+  sec = Math.ceil(sec);
+  const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
+  return (h ? h + ':' + pad(m) : pad(m)) + ':' + pad(s);
+}
+let lastBeepSec = -1;
+function drawTM() {
+  const r = tmRemaining(), el = $('tmDisp');
+  el.textContent = fmtTM(r);
+  el.classList.toggle('last', r > 0 && r <= 10);
+  el.classList.toggle('warn', r > 10 && r <= 60);
+  const pct = tmSet ? (r / tmSet) * 100 : 0;
+  $('tmBar').style.width = pct + '%';
+  $('tmBar').style.background = r <= 10 ? 'var(--red)' : r <= 60 ? 'var(--orange)' : 'var(--green)';
+  if (tmRun) {
+    const cs = Math.ceil(r);
+    if (cs <= 5 && cs > 0 && cs !== lastBeepSec) { lastBeepSec = cs; beep(660, .12, 0, .35); }
+    if (r <= 0) {
+      tmRun = false; tmLeft = 0; setTmBtn();
+      startRing('시간 끝!');
+    }
+  }
+}
+function setTmBtn() {
+  $('tmStart').textContent = tmRun ? '일시정지' : '시작';
+  $('tmStart').className = 'btn ' + (tmRun ? 'y' : 'g');
+  document.querySelectorAll('#tmAdj .chip, #tmPre .chip').forEach(b => b.disabled = tmRun);
+  document.querySelectorAll('#tmAdj, #tmPre').forEach(b => b.style.opacity = tmRun ? .35 : 1);
+}
+$('tmStart').onclick = () => {
+  audio();
+  if (tmRun) { tmLeft = tmRemaining(); tmRun = false; }
+  else { if (tmLeft <= 0) tmLeft = tmSet; if (tmLeft <= 0) return; tmEnd = Date.now() + tmLeft * 1000; tmRun = true; lastBeepSec = -1; }
+  setTmBtn(); drawTM();
+};
+$('tmReset').onclick = () => { tmRun = false; tmLeft = tmSet; setTmBtn(); drawTM(); };
+document.querySelectorAll('#tmPre .chip').forEach(b => b.onclick = () => { tmSet = tmLeft = +b.dataset.set; drawTM(); });
+document.querySelectorAll('#tmAdj .chip').forEach(b => b.onclick = () => {
+  tmLeft = Math.min(99*60 + 59 + 3600*9, Math.max(0, Math.round(tmLeft) + +b.dataset.add));
+  tmSet = tmLeft; drawTM();
+});
+
+/* ---------- 알람 ---------- */
+let aH = 9, aM = 0, alarms = [];
+try { alarms = JSON.parse(localStorage.getItem('classAlarms') || '[]'); } catch (e) { alarms = []; }
+function saveAlarms() { try { localStorage.setItem('classAlarms', JSON.stringify(alarms)); } catch (e) {} }
+function drawSet() { $('aH').textContent = pad(aH); $('aM').textContent = pad(aM); }
+document.querySelectorAll('[data-h]').forEach(b => b.onclick = () => { aH = (aH + +b.dataset.h + 24) % 24; drawSet(); });
+document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { aM = (aM + +b.dataset.m + 60) % 60; drawSet(); });
+// 길게 누르면 1분 단위: 분 숫자를 클릭하면 +1
+$('aM').onclick = () => { aM = (aM + 1) % 60; drawSet(); };
+$('aH').onclick = () => { aH = (aH + 1) % 24; drawSet(); };
+$('aAdd').onclick = () => {
+  alarms.push({ id: Date.now(), h: aH, m: aM, memo: $('aMemo').value.trim(), on: true, last: '' });
+  alarms.sort((a,b) => (a.h*60+a.m) - (b.h*60+b.m));
+  $('aMemo').value = ''; saveAlarms(); drawAlarms(); audio();
+};
+function drawAlarms() {
+  $('aList').innerHTML = alarms.length ? alarms.map(a => `
+    <div class="al ${a.on ? '' : 'off'}">
+      <span class="t num">${a.h < 12 ? '오전' : '오후'} ${pad(a.h % 12 || 12)}:${pad(a.m)}</span>
+      <span class="m">${a.memo ? a.memo.replace(/[<>&]/g,'') : ''}</span>
+      <button class="chip" data-tog="${a.id}">${a.on ? '켜짐' : '꺼짐'}</button>
+      <button class="chip" data-del="${a.id}">삭제</button>
+    </div>`).join('') : '<div class="label" style="text-align:center">아직 알람이 없어요</div>';
+  $('aList').querySelectorAll('[data-tog]').forEach(b => b.onclick = () => {
+    const a = alarms.find(x => x.id == b.dataset.tog); a.on = !a.on; saveAlarms(); drawAlarms(); });
+  $('aList').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    alarms = alarms.filter(x => x.id != b.dataset.del); saveAlarms(); drawAlarms(); });
+}
+function checkAlarms(now) {
+  const key = `${now.toDateString()} ${now.getHours()}:${now.getMinutes()}`;
+  alarms.forEach(a => {
+    if (a.on && a.h === now.getHours() && a.m === now.getMinutes() && a.last !== key) {
+      a.last = key; saveAlarms();
+      startRing(a.memo || `${pad(a.h)}:${pad(a.m)} 알람`);
+    }
+  });
+}
+
+/* ---------- 키보드 ---------- */
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if ($('ring').classList.contains('on')) { stopRing(); e.preventDefault(); return; }
+  const cur = document.querySelector('main section.on').id;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (cur === 'stopwatch') $('swStart').click();
+    if (cur === 'timer') $('tmStart').click();
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    if (cur === 'stopwatch') $('swReset').click();
+    if (cur === 'timer') $('tmReset').click();
+  }
+  if (e.key === 'l' || e.key === 'L') if (cur === 'stopwatch') $('swLap').click();
+  const n = ['1','2','3','4'].indexOf(e.key);
+  if (n >= 0) document.querySelectorAll('nav .tab')[n].click();
+});
+
+/* ---------- 루프 ---------- */
+drawSet(); drawAlarms(); drawTM(); drawSW(); tickClock();
+setInterval(tickClock, 250);
+(function loop() { if (swRun) drawSW(); if (tmRun) drawTM(); requestAnimationFrame(loop); })();
+setInterval(() => { if (tmRun) drawTM(); }, 250); // 창이 가려져도 타이머 종료 감지
+</script>
+</body>
+</html>
