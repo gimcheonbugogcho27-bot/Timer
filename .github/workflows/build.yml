@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build EXE & APK
 
 on:
   push:
@@ -10,14 +10,15 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  windows:
+    name: Windows EXE
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install
         run: npm install
@@ -38,3 +39,68 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.exe
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Capacitor 안드로이드 프로젝트 만들기
+        run: |
+          mkdir -p apk && cd apk
+          npm init -y > /dev/null
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          mkdir -p www
+          cp ../index.html www/index.html
+          cp ../capacitor.config.json .
+          npx cap add android
+          npx cap sync android
+
+      - name: 화면 꺼짐 방지
+        run: |
+          cd apk/android/app/src/main
+          ACT=java/kr/school/classtimer/MainActivity.java
+          cat > $ACT <<'EOF'
+          package kr.school.classtimer;
+
+          import android.os.Bundle;
+          import android.view.WindowManager;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+              }
+          }
+          EOF
+
+      - name: Build apk
+        run: |
+          cd apk/android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../우리반타이머.apk
+
+      - name: Upload apk (Actions 탭에서 다운로드)
+        uses: actions/upload-artifact@v4
+        with:
+          name: 우리반타이머-android
+          path: 우리반타이머.apk
+
+      - name: Release (v로 시작하는 태그일 때)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: 우리반타이머.apk

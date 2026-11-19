@@ -18,15 +18,17 @@
 | F11 | 전체화면 |
 | 아무 키 / 화면 클릭 | 울리는 소리 멈춤 |
 
-## exe 받기 (자동 빌드)
-이 저장소에 올리면 GitHub Actions가 자동으로 Windows exe를 만듭니다.
+## exe · apk 받기 (자동 빌드)
+이 저장소에 올리면 GitHub Actions가 자동으로 Windows exe와 Android apk를 만듭니다.
 
-1. 저장소 위쪽 **Actions** 탭 → **Build Windows EXE** 클릭
-2. 가장 최근 실행(초록 체크) 클릭 → 아래 **Artifacts**의 `우리반타이머-windows` 다운로드
-3. 압축을 풀면 `우리반타이머-포터블.exe`(설치 없이 실행), `우리반타이머-설치.exe`(설치형)
+1. 저장소 위쪽 **Actions** 탭 → **Build EXE & APK** 클릭
+2. 가장 최근 실행(초록 체크) 클릭 → 아래 **Artifacts**에서 다운로드
+   - `우리반타이머-windows`: `우리반타이머-포터블.exe`(설치 없이 실행), `우리반타이머-설치.exe`(설치형)
+   - `우리반타이머-android`: `우리반타이머.apk` (휴대폰·태블릿에 설치, 실행 중 화면 꺼짐 방지)
 
-> 수동 실행: Actions 탭 → Build Windows EXE → **Run workflow**
-> 릴리스로 올리기: `v1.0.0` 같은 태그를 푸시하면 Releases에 exe가 첨부됩니다.
+> 수동 실행: Actions 탭 → Build EXE & APK → **Run workflow**
+> 릴리스로 올리기: `v1.0.0` 같은 태그를 푸시하면 Releases에 exe·apk가 첨부됩니다.
+> apk 설치 시 "출처를 알 수 없는 앱" 설치를 허용해야 합니다.
 
 ※ 서명 없는 exe라 처음 실행할 때 Windows가 "PC 보호" 창을 띄우면 **추가 정보 → 실행**을 누르세요.
 
