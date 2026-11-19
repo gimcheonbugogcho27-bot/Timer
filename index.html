@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>우리반타이머</title>
-<link rel="icon" href="icon-512.png">
+<link rel="icon" href="web-icons/icon-192.png">
+<link rel="apple-touch-icon" href="web-icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="우리반타이머">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b1026">
 <style>
   /* ===== 테마 ===== */
   :root[data-theme="dark"]{
@@ -45,7 +52,8 @@
   .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";font-weight:600;letter-spacing:-.03em}
 
   /* ===== 상단바 ===== */
-  header{display:flex;align-items:center;justify-content:center;gap:.6rem;padding:min(2vh,1rem) 1rem 0}
+  header{display:flex;align-items:center;justify-content:center;gap:.6rem;padding:min(2vh,1rem) 1rem 0;padding-top:max(min(2vh,1rem),env(safe-area-inset-top))}
+  main{padding-bottom:env(safe-area-inset-bottom)}
   .seg{display:flex;padding:.3rem;border-radius:999px;gap:.2rem}
   .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;
     font-size:clamp(.95rem,min(1.8vw,3vh),1.5rem);padding:.55em 1.3em;border-radius:999px;transition:.25s;white-space:nowrap}
@@ -730,6 +738,18 @@ document.addEventListener('keydown', e => {
   const n = ['1','2','3','4'].indexOf(e.key);
   if (n >= 0 && !(mini && n === 3)) tabs[n].click();
 });
+
+/* ---------- 웹 버전: 화면 꺼짐 방지 · 오프라인 ---------- */
+let wakeLock = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && !document.hidden) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+document.addEventListener('pointerdown', keepAwake, { once: true });
+keepAwake();
+if ('serviceWorker' in navigator && location.protocol === 'https:' && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 
 /* ---------- 루프 ---------- */
 drawSet(); drawAlarms(); drawTM(); drawSW(); setSwBtn(); setTmUI(); tickClock();

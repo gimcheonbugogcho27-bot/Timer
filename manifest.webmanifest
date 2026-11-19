@@ -1,0 +1,16 @@
+{
+  "name": "우리반타이머",
+  "short_name": "우리반타이머",
+  "description": "시계 · 세계시각 · 스톱워치 · 타이머 · 알람",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1026",
+  "theme_color": "#0b1026",
+  "lang": "ko",
+  "icons": [
+    { "src": "web-icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "web-icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

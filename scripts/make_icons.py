@@ -72,6 +72,8 @@ def svg(kind):
         body = f'<g transform="translate(512 512) scale(.62) translate(-512 -540)">{watch()}</g>'
     elif kind == 'bgonly':
         body = bg('full')
+    elif kind == 'full':  # 아이폰/웹 홈 화면용: 꽉 찬 사각형 (모서리는 기기가 깎음)
+        body = bg('full') + f'<g transform="translate(512 512) scale(.8) translate(-512 -540)">{watch()}</g>'
     else:
         body = bg(kind) + f'<g transform="translate(512 512) scale(.92) translate(-512 -540)">{watch()}</g>'
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">{DEFS}{body}</svg>'
@@ -91,6 +93,8 @@ with sync_playwright() as p:
     open(f'{OUT}/icon.svg', 'w').write(svg('square'))
     render(pg, 'square', 1024, f'{OUT}/build/icon.png')          # electron-builder (exe)
     render(pg, 'square', 512, f'{OUT}/icon-512.png')               # 웹/창 아이콘
+    for s in (180, 192, 512):
+        render(pg, 'full', s, f'{OUT}/web-icons/icon-{s}.png')
     dens = {'mdpi':1, 'hdpi':1.5, 'xhdpi':2, 'xxhdpi':3, 'xxxhdpi':4}
     for d, s in dens.items():
         base = f'{OUT}/android-res/mipmap-{d}'

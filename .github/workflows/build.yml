@@ -57,6 +57,7 @@ jobs:
           npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/local-notifications@7
           mkdir -p www
           cp ../index.html www/index.html
+          cp -r ../web-icons www/
           cp ../capacitor.config.json .
           npx cap add android
           npx cap sync android
@@ -147,3 +148,22 @@ jobs:
             - ClassTimer-Portable.exe : 설치 없이 실행 (Windows)
             - ClassTimer-Setup.exe : 설치형 (Windows)
             - ClassTimer.apk : 안드로이드
+
+  web:
+    name: 웹 버전 (아이폰 · 설치 없이)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: gh-pages 브랜치로 배포
+        run: |
+          mkdir site
+          cp index.html manifest.webmanifest sw.js site/
+          cp -r web-icons site/
+          touch site/.nojekyll
+          cd site
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -qm "웹 버전 배포 ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
