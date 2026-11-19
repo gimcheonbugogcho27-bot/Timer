@@ -130,6 +130,38 @@
   #ringMsg{font-size:clamp(3rem,min(12vw,18vh),12rem);font-weight:900;line-height:1.1;color:var(--danger)}
   @keyframes pulse{0%,100%{background:rgba(225,29,72,.18)}50%{background:rgba(249,115,22,.4)}}
 
+  /* ===== PC 앱(창 버튼) ===== */
+  .app-only{display:none}
+  body.app .app-only{display:flex}
+  body.app .icon.app-only{display:grid}
+  body.app header{-webkit-app-region:drag}
+  body.app header button, body.app header .seg{-webkit-app-region:no-drag}
+  .winctl{gap:.2rem;margin-left:.4rem}
+  .winctl .icon{background:transparent;width:2.3em;height:2.3em;border-radius:12px}
+  .winctl .icon:hover{background:var(--glass-strong)}
+  .winctl .close:hover{background:#e11d48;color:#fff}
+  .ctrls{display:flex;flex-direction:column;gap:inherit;align-items:center}
+
+  /* ===== 작은 창 모드 ===== */
+  #miniBar{display:none}
+  body.mini{-webkit-app-region:drag}
+  body.mini button, body.mini input{-webkit-app-region:no-drag}
+  body.mini header, body.mini .world, body.mini #tmPre, body.mini .laps, body.mini .cap,
+  body.mini #cDate, body.mini #swLap, body.mini #tmReset,
+  body.mini #tmAdj [data-add="-10"], body.mini #tmAdj [data-add="10"], body.mini #tmAdj [data-add="300"]{display:none!important}
+  body.mini #miniBar{display:block;position:fixed;top:8px;right:8px;z-index:20}
+  body.mini #miniBar .icon{width:2em;height:2em;font-size:1rem}
+  body.mini section{padding:0;gap:0}
+  body.mini .card{width:100vw;height:100vh;border-radius:0;border:0;box-shadow:none;padding:4vh 4vw;justify-content:center;gap:3vh;background:transparent}
+  body.mini .big{font-size:min(26vw,52vh)}
+  body.mini .bar{height:max(6px,2.5vh)}
+  body.mini .ctrls{flex-direction:row;gap:2vw}
+  body.mini .row{flex-wrap:nowrap;gap:2vw}
+  body.mini .btn{font-size:max(.85rem,min(4.6vw,8vh));padding:.4em 1.2em;min-width:0}
+  body.mini .pill{font-size:max(.8rem,min(3.8vw,7vh));padding:.35em .8em}
+  body.mini #ringMsg{font-size:min(14vw,26vh)}
+  body.mini .blobs i{filter:blur(50px)}
+
   @media (max-width:900px){ .world{grid-template-columns:repeat(2,1fr)} }
   @media (max-width:640px){
     header{flex-direction:column;align-items:stretch}
@@ -147,6 +179,9 @@
 </head>
 <body>
 <div class="blobs"><i></i><i></i><i></i></div>
+<div id="miniBar">
+  <button class="icon glass" id="miniExit" title="크게 보기 (M)">⤢</button>
+</div>
 
 <header>
   <div class="seg glass" id="tabs">
@@ -158,6 +193,12 @@
   <div class="tools">
     <button class="icon glass" id="themeBtn" title="테마 바꾸기 (T)">☀️</button>
     <button class="icon glass" id="fsBtn" title="전체화면 (F11)">⛶</button>
+    <button class="icon glass app-only" id="miniBtn" title="작은 창으로 띄우기 (M)">⧉</button>
+    <span class="winctl app-only">
+      <button class="icon" id="wMin" title="최소화">─</button>
+      <button class="icon" id="wMax" title="최대화">☐</button>
+      <button class="icon close" id="wClose" title="닫기">✕</button>
+    </span>
   </div>
 </header>
 
@@ -176,7 +217,7 @@
     <div class="card glass">
       <div class="cap">스톱워치</div>
       <div class="big num" id="swDisp"></div>
-      <div class="row">
+      <div class="row" id="swBtns">
         <button class="btn primary" id="swStart">시작</button>
         <button class="btn ghost" id="swLap">기록</button>
         <button class="btn ghost" id="swReset">초기화</button>
@@ -191,6 +232,7 @@
       <div class="cap" id="tmCap">타이머</div>
       <div class="big num" id="tmDisp">05:00</div>
       <div class="bar" id="tmBarWrap"><div id="tmBar"></div></div>
+      <div class="ctrls">
       <div class="row" id="tmAdj">
         <button class="pill minus" data-add="-60">− 1분</button>
         <button class="pill minus" data-add="-10">− 10초</button>
@@ -201,6 +243,7 @@
       <div class="row">
         <button class="btn primary" id="tmStart">시작</button>
         <button class="btn ghost" id="tmReset">초기화</button>
+      </div>
       </div>
     </div>
     <div class="row" id="tmPre">
@@ -448,6 +491,26 @@ function checkAlarms(now) {
   });
 }
 
+/* ---------- PC 앱: 창 버튼 · 작은 창 ---------- */
+const api = window.winApi;
+let mini = false;
+function setMini(on) {
+  if (!api) return;
+  mini = on;
+  if (on && document.querySelector('main section.on').id === 'alarm') showTab('clock');
+  document.body.classList.toggle('mini', on);
+  api.mini(on);
+}
+if (api) {
+  document.body.classList.add('app');
+  $('wMin').onclick = () => api.minimize();
+  $('wMax').onclick = () => api.maximize();
+  $('wClose').onclick = () => api.close();
+  $('miniBtn').onclick = () => setMini(true);
+  $('miniExit').onclick = () => setMini(false);
+  document.addEventListener('dblclick', e => { if (mini && !e.target.closest('button')) setMini(false); });
+}
+
 /* ---------- 키보드 ---------- */
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
@@ -457,11 +520,12 @@ document.addEventListener('keydown', e => {
   if (k === 'r') { if (cur === 'stopwatch') $('swReset').click(); if (cur === 'timer') $('tmReset').click(); }
   if (k === 'l' && cur === 'stopwatch') $('swLap').click();
   if (k === 't') $('themeBtn').click();
+  if (k === 'm') setMini(!mini);
   if (cur === 'timer' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
     e.preventDefault(); document.querySelector(`#tmAdj [data-add="${e.key === 'ArrowUp' ? 60 : -60}"]`).click();
   }
   const n = ['1','2','3','4'].indexOf(e.key);
-  if (n >= 0) tabs[n].click();
+  if (n >= 0 && !(mini && n === 3)) tabs[n].click();
 });
 
 /* ---------- 루프 ---------- */
