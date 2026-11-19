@@ -43,3 +43,6 @@ npm start      # 바로 실행
 npm run dist   # dist 폴더에 exe 생성
 ```
 `index.html`만 브라우저로 열어도 그대로 사용할 수 있습니다.
+
+## 앱 아이콘
+`icon.svg`가 원본입니다. 아이콘을 바꾸려면 `scripts/make_icons.py`의 그림을 고친 뒤 실행하면 exe용(`build/icon.png`)과 apk용(`android-res/`) 아이콘이 모두 다시 만들어집니다.

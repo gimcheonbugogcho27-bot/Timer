@@ -11,7 +11,8 @@ function createWindow() {
     minWidth: 640,
     minHeight: 480,
     title: '우리반타이머',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0b1026',
+    icon: path.join(__dirname, 'icon-512.png'),
     autoHideMenuBar: true,
     webPreferences: { contextIsolation: true }
   });
