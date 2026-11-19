@@ -1,5 +1,11 @@
 {
   "appId": "kr.school.classtimer",
   "appName": "우리반타이머",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_timer",
+      "iconColor": "#5b5bf0"
+    }
+  }
 }

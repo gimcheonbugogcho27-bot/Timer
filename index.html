@@ -112,6 +112,19 @@
   .keys button:active{transform:scale(.94)}
   .keys [data-k="del"]{color:var(--danger)}
 
+  .setcard{width:min(92vw,560px);align-items:stretch;gap:.7rem;max-height:94vh;overflow:auto}
+  .sethead{display:flex;justify-content:space-between;align-items:center;font-size:clamp(1.2rem,2.4vw,1.7rem)}
+  .setlabel{font-weight:700;color:var(--muted);font-size:clamp(.95rem,1.6vw,1.15rem);margin-top:.4rem}
+  .sndlist{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+  .snd{display:flex;align-items:center;justify-content:space-between;gap:.4rem;border-radius:18px;padding:.55rem .6rem .55rem 1rem;
+       border:1px solid var(--border);background:var(--glass);cursor:pointer;font-weight:700;font-size:clamp(.95rem,1.6vw,1.15rem);color:var(--text)}
+  .snd.sel{background:var(--accent);color:var(--on-accent);border-color:transparent}
+  .snd .play{border:0;border-radius:50%;width:2.1em;height:2.1em;cursor:pointer;background:var(--glass-strong);color:inherit;font-size:.9em}
+  input[type=range]{width:100%;accent-color:var(--accent);height:2rem}
+  #autoStop .pill.sel{background:var(--accent);color:var(--on-accent)}
+  .setnote{font-size:.9rem;color:var(--muted);line-height:1.5}
+  #ring .cap span{color:var(--text)}
+
   /* ===== 스톱워치 ===== */
   .laps{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;max-height:22vh;overflow:auto;width:min(94vw,1200px)}
   .lap{border-radius:16px;padding:.35rem 1rem;font-size:clamp(1rem,min(2vw,3vh),1.6rem);display:flex;gap:.8rem;align-items:baseline}
@@ -206,6 +219,7 @@
     <button data-t="alarm">알람</button>
   </div>
   <div class="tools">
+    <button class="icon glass" id="setBtn" title="소리 설정">⚙️</button>
     <button class="icon glass" id="themeBtn" title="테마 바꾸기 (T)">☀️</button>
     <button class="icon glass" id="fsBtn" title="전체화면 (F11)">⛶</button>
     <button class="icon glass app-only" id="miniBtn" title="작은 창으로 띄우기 (M)">⧉</button>
@@ -316,10 +330,31 @@
   </div>
 </div>
 
+<div id="settings" class="overlay">
+  <div class="card glass setcard">
+    <div class="sethead"><b>소리 설정</b><button class="del" id="setClose" title="닫기">✕</button></div>
+
+    <div class="setlabel">알람 소리</div>
+    <div class="sndlist" id="sndList"></div>
+
+    <div class="setlabel">음량 <span id="volVal"></span></div>
+    <input type="range" id="vol" min="0" max="100" step="5">
+
+    <div class="setlabel">울림 자동 멈춤</div>
+    <div class="row" id="autoStop">
+      <button class="pill" data-s="30">30초</button>
+      <button class="pill" data-s="60">1분</button>
+      <button class="pill" data-s="180">3분</button>
+      <button class="pill" data-s="0">안 멈춤</button>
+    </div>
+    <div class="setnote" id="setNote"></div>
+  </div>
+</div>
+
 <div id="ring">
   <div class="card glass">
     <div id="ringMsg">시간 끝!</div>
-    <div class="cap">화면을 누르면 멈춰요</div>
+    <div class="cap">화면을 누르면 멈춰요<span id="ringAuto"></span></div>
   </div>
 </div>
 
@@ -360,21 +395,40 @@ function audio() {
   return actx;
 }
 document.addEventListener('pointerdown', () => audio(), { once: true });
-function beep(freq = 880, dur = .18, when = 0, vol = .45) {
-  const a = audio(), o = a.createOscillator(), g = a.createGain(), t = a.currentTime + when;
-  o.type = 'triangle'; o.frequency.value = freq;
+/* 설정 (소리 · 음량 · 자동 멈춤) */
+const settings = Object.assign({ sound: 'beep', vol: 80, autoStop: 60 }, store.get('settings', {}));
+const saveSettings = () => store.set('settings', settings);
+const V = () => settings.vol / 100;
+
+function tone(f, dur, when = 0, o = {}) {
+  const a = audio(), osc = a.createOscillator(), g = a.createGain(), t = a.currentTime + when;
+  const vol = (o.vol ?? .45) * V();
+  osc.type = o.type || 'triangle'; osc.frequency.value = f;
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01);
-  g.gain.setValueAtTime(vol, t + dur - .03); g.gain.linearRampToValueAtTime(0, t + dur);
-  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + .02);
+  if (o.decay) g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  else { g.gain.setValueAtTime(vol, t + dur - .03); g.gain.linearRampToValueAtTime(0, t + dur); }
+  osc.connect(g).connect(a.destination); osc.start(t); osc.stop(t + dur + .02);
 }
-let ringTimer = null;
+const beep = (f = 880, dur = .18, when = 0, vol = .45) => tone(f, dur, when, { vol });
+const bell = (f, w) => [[1,.45],[2.76,.18],[5.4,.08]].forEach(([m, v]) => tone(f*m, 1.8, w, { type:'sine', vol:v, decay:true }));
+const SOUNDS = {
+  beep: { name: '삐삐삐', every: 1500, play: () => { tone(988,.15,0,{type:'square',vol:.25}); tone(988,.15,.22,{type:'square',vol:.25}); tone(988,.15,.44,{type:'square',vol:.25}); tone(1319,.32,.66); } },
+  bell: { name: '종소리', every: 2000, play: () => { bell(880, 0); bell(659, .55); } },
+  xylo: { name: '실로폰', every: 1600, play: () => [1047,1319,1568,2093].forEach((f,i) => tone(f,.45,i*.14,{type:'sine',decay:true})) },
+  soft: { name: '부드러운 차임', every: 2200, play: () => { tone(660,.7,0,{type:'sine',vol:.4,decay:true}); tone(880,.9,.45,{type:'sine',vol:.4,decay:true}); } }
+};
+
+let ringTimer = null, ringStop = null;
 function startRing(msg) {
   $('ringMsg').textContent = msg;
+  $('ringAuto').textContent = settings.autoStop ? ` · ${settings.autoStop >= 60 ? settings.autoStop / 60 + '분' : settings.autoStop + '초'} 뒤 자동으로 멈춰요` : '';
   $('ring').classList.add('on');
-  const p = () => { beep(988,.15,0); beep(988,.15,.22); beep(988,.15,.44); beep(1319,.32,.66); };
-  p(); clearInterval(ringTimer); ringTimer = setInterval(p, 1500);
+  const s = SOUNDS[settings.sound] || SOUNDS.beep;
+  s.play(); clearInterval(ringTimer); ringTimer = setInterval(s.play, s.every);
+  clearTimeout(ringStop);
+  if (settings.autoStop) ringStop = setTimeout(stopRing, settings.autoStop * 1000);   // 자동 멈춤
 }
-function stopRing() { clearInterval(ringTimer); ringTimer = null; $('ring').classList.remove('on'); }
+function stopRing() { clearInterval(ringTimer); clearTimeout(ringStop); ringTimer = ringStop = null; $('ring').classList.remove('on'); }
 $('ring').onclick = stopRing;
 
 /* ---------- 시계 + 세계시각 ---------- */
@@ -527,6 +581,73 @@ $('padOk').onclick = () => closePad(true);
 $('padCancel').onclick = () => closePad(false);
 $('pad').onclick = e => { if (e.target.id === 'pad') closePad(false); };
 
+/* ---------- 설정 창 ---------- */
+const setOpen = () => $('settings').classList.contains('on');
+function drawSettings() {
+  $('sndList').innerHTML = Object.entries(SOUNDS).map(([k, s]) =>
+    `<div class="snd ${settings.sound === k ? 'sel' : ''}" data-snd="${k}"><span>${s.name}</span><button class="play" data-play="${k}" title="미리 듣기">▶</button></div>`).join('');
+  $('sndList').querySelectorAll('[data-snd]').forEach(el => el.onclick = e => {
+    settings.sound = el.dataset.snd; saveSettings(); drawSettings();
+    if (!e.target.closest('[data-play]')) SOUNDS[settings.sound].play();
+  });
+  $('sndList').querySelectorAll('[data-play]').forEach(b => b.onclick = e => { e.stopPropagation(); audio(); SOUNDS[b.dataset.play].play(); });
+  $('vol').value = settings.vol; $('volVal').textContent = settings.vol + '%';
+  document.querySelectorAll('#autoStop .pill').forEach(b => b.classList.toggle('sel', +b.dataset.s === settings.autoStop));
+  $('setNote').textContent = LN
+    ? '앱을 내리거나 꺼도 알람·타이머가 휴대폰 알림으로 울려요. 이때 음량은 휴대폰 알림 음량을 따라요.'
+    : '';
+}
+$('vol').oninput = () => { settings.vol = +$('vol').value; $('volVal').textContent = settings.vol + '%'; saveSettings(); };
+$('vol').onchange = () => SOUNDS[settings.sound].play();
+document.querySelectorAll('#autoStop .pill').forEach(b => b.onclick = () => { settings.autoStop = +b.dataset.s; saveSettings(); drawSettings(); });
+$('setBtn').onclick = () => { audio(); drawSettings(); $('settings').classList.add('on'); };
+$('setClose').onclick = () => $('settings').classList.remove('on');
+$('settings').onclick = e => { if (e.target.id === 'settings') $('settings').classList.remove('on'); };
+
+/* ---------- 휴대폰(apk): 앱을 내려도 울리는 알림 ---------- */
+const Cap = window.Capacitor;
+const LN = Cap && Cap.isNativePlatform && Cap.isNativePlatform()
+  ? (Cap.Plugins && Cap.Plugins.LocalNotifications) || (Cap.registerPlugin && Cap.registerPlugin('LocalNotifications'))
+  : null;
+async function nativeInit() {
+  if (!LN) return;
+  try {
+    const p = await LN.checkPermissions();
+    if (p.display !== 'granted') await LN.requestPermissions();
+    for (const [k, s] of Object.entries(SOUNDS)) {
+      await LN.createChannel({ id: 'alarm-' + k, name: '알람 · ' + s.name, importance: 5, visibility: 1,
+                               sound: 'snd_' + k + '.wav', vibration: true, lights: true });
+    }
+  } catch (e) { console.warn(e); }
+}
+async function nativeCancel() {
+  if (!LN) return;
+  try {
+    const p = await LN.getPending();
+    if (p.notifications.length) await LN.cancel({ notifications: p.notifications.map(n => ({ id: n.id })) });
+  } catch (e) {}
+}
+async function nativeSchedule() {    // 앱이 화면에서 사라질 때 예약
+  if (!LN) return;
+  try {
+    await nativeCancel();
+    const ch = 'alarm-' + settings.sound, list = [];
+    alarms.filter(a => a.on).forEach((a, i) => list.push({
+      id: 100 + i, title: '⏰ 우리반타이머', body: a.memo || `${a.h < 12 ? '오전' : '오후'} ${a.h % 12 || 12}:${pad(a.m)} 알람`,
+      channelId: ch, smallIcon: 'ic_stat_timer', iconColor: '#5b5bf0',
+      schedule: { on: { hour: a.h, minute: a.m }, allowWhileIdle: true }
+    }));
+    if (tmRun && tmEnd > Date.now() + 1000) list.push({
+      id: 1, title: '⏳ 시간 끝!', body: '타이머가 끝났어요', channelId: ch, smallIcon: 'ic_stat_timer', iconColor: '#5b5bf0',
+      schedule: { at: new Date(tmEnd), allowWhileIdle: true }
+    });
+    if (list.length) await LN.schedule({ notifications: list });
+  } catch (e) { console.warn(e); }
+}
+// 화면에 보일 땐 앱이 직접 울리고, 내려가면 휴대폰 알림에 맡김 (두 번 울리지 않게)
+document.addEventListener('visibilitychange', () => { document.hidden ? nativeSchedule() : nativeCancel(); });
+nativeInit();
+
 /* ---------- 알람 ---------- */
 let aH = 9, aM = 0, alarms = store.get('classAlarms', []);
 const saveAlarms = () => store.set('classAlarms', alarms);
@@ -586,6 +707,7 @@ if (api) {
 /* ---------- 키보드 ---------- */
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
+  if (setOpen()) { if (e.key === 'Escape') $('settings').classList.remove('on'); return; }
   if (padOpen()) {
     e.preventDefault();
     if (/^[0-9]$/.test(e.key)) padKey(e.key);

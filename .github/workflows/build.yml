@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p apk && cd apk
           npm init -y > /dev/null
-          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/local-notifications@7
           mkdir -p www
           cp ../index.html www/index.html
           cp ../capacitor.config.json .
@@ -81,7 +81,13 @@ jobs:
           }
           EOF
 
-      - name: 앱 아이콘 넣기
+      - name: 알림 권한 (정확한 시각에 알람)
+        run: |
+          M=apk/android/app/src/main/AndroidManifest.xml
+          sed -i 's|<application|<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />\n    <application|' $M
+          grep -n "uses-permission" $M
+
+      - name: 앱 아이콘 · 알림 소리 넣기
         run: |
           RES=apk/android/app/src/main/res
           cp -r android-res/* $RES/

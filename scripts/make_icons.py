@@ -58,7 +58,16 @@ def bg(shape):
     <rect width="1024" height="1024" fill="url(#glow2)"/>
   </g>'''
 
+STAT = '''<g fill="none" stroke="#fff" stroke-linecap="round">
+  <circle cx="512" cy="580" r="330" stroke-width="90"/>
+  <line x1="512" y1="580" x2="512" y2="390" stroke-width="80"/>
+  <line x1="512" y1="580" x2="640" y2="655" stroke-width="80"/>
+</g>
+<rect x="430" y="90" width="164" height="110" rx="40" fill="#fff"/>'''
+
 def svg(kind):
+    if kind == 'stat':    # 상태 표시줄 알림 아이콘 (흰색 단색)
+        return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">{STAT}</svg>'
     if kind == 'fg':      # 적응형 아이콘 전경: 안전영역(66%) 안에 들어가게 축소
         body = f'<g transform="translate(512 512) scale(.62) translate(-512 -540)">{watch()}</g>'
     elif kind == 'bgonly':
@@ -89,4 +98,5 @@ with sync_playwright() as p:
         render(pg, 'circle', int(48*s), f'{base}/ic_launcher_round.png')
         render(pg, 'fg', int(108*s), f'{base}/ic_launcher_foreground.png')
         render(pg, 'bgonly', int(108*s), f'{base}/ic_launcher_background.png')
+        render(pg, 'stat', int(24*s), f'{OUT}/android-res/drawable-{d}/ic_stat_timer.png')
     b.close()
