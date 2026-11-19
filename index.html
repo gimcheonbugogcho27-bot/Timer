@@ -97,6 +97,21 @@
   #tmPre{transition:opacity .3s}
   #tmPre.hide{opacity:0;pointer-events:none}
 
+  #tmDisp.editable{cursor:pointer;border-radius:24px;padding:0 .15em;transition:background .2s}
+  #tmDisp.editable:hover{background:var(--glass)}
+  .overlay{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+           background:rgba(10,12,30,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .overlay.on{display:flex;animation:fade .2s ease}
+  .padcard{width:auto;max-width:94vw;max-height:96vh}
+  .padshow{font-size:clamp(3rem,min(10vw,13vh),8rem);line-height:1}
+  .padshow .dim{color:var(--muted);opacity:.5}
+  .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:min(1.2vh,.6rem)}
+  .keys button{font:inherit;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;color:var(--text);
+     font-size:clamp(1.3rem,min(3vw,5vh),2.4rem);width:min(22vw,11vh,6.5rem);height:min(10vh,4.6rem);
+     border-radius:20px;border:1px solid var(--border);background:var(--glass-strong);transition:transform .1s}
+  .keys button:active{transform:scale(.94)}
+  .keys [data-k="del"]{color:var(--danger)}
+
   /* ===== 스톱워치 ===== */
   .laps{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;max-height:22vh;overflow:auto;width:min(94vw,1200px)}
   .lap{border-radius:16px;padding:.35rem 1rem;font-size:clamp(1rem,min(2vw,3vh),1.6rem);display:flex;gap:.8rem;align-items:baseline}
@@ -230,7 +245,7 @@
   <section id="timer">
     <div class="card glass">
       <div class="cap" id="tmCap">타이머</div>
-      <div class="big num" id="tmDisp">05:00</div>
+      <div class="big num" id="tmDisp" title="눌러서 시간 직접 입력">05:00</div>
       <div class="bar" id="tmBarWrap"><div id="tmBar"></div></div>
       <div class="ctrls">
       <div class="row" id="tmAdj">
@@ -283,6 +298,23 @@
     <div class="alist" id="aList"></div>
   </section>
 </main>
+
+<div id="pad" class="overlay">
+  <div class="card glass padcard">
+    <div class="cap">타이머 시간 입력</div>
+    <div class="num padshow" id="padShow">00:00</div>
+    <div class="keys" id="keys">
+      <button>1</button><button>2</button><button>3</button>
+      <button>4</button><button>5</button><button>6</button>
+      <button>7</button><button>8</button><button>9</button>
+      <button data-k="00">00</button><button>0</button><button data-k="del">⌫</button>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="padCancel">취소</button>
+      <button class="btn primary" id="padOk">확인</button>
+    </div>
+  </div>
+</div>
 
 <div id="ring">
   <div class="card glass">
@@ -408,7 +440,7 @@ function fmtTM(sec) {
 function drawTM() {
   const r = tmRemaining(), state = r > 0 && r <= 10 ? 'last' : r > 10 && r <= 60 ? 'warn' : '';
   $('tmDisp').textContent = fmtTM(r);
-  $('tmDisp').className = 'big num ' + state;
+  $('tmDisp').className = 'big num ' + state + (tmRun ? '' : ' editable');
   $('tmBarWrap').className = 'bar ' + state;
   $('tmBar').style.width = (tmSet ? Math.min(100, r / tmSet * 100) : 0) + '%';
   if (tmRun) {
@@ -421,7 +453,8 @@ function setTmUI() {
   $('tmStart').textContent = tmRun ? '일시정지' : (tmLeft > 0 && tmLeft < tmSet ? '계속' : '시작');
   $('tmStart').className = 'btn ' + (tmRun ? 'pause' : 'primary');
   $('tmPre').classList.toggle('hide', tmRun);
-  $('tmCap').textContent = tmRun ? '진행 중 · 시간을 더하거나 뺄 수 있어요' : '타이머';
+  $('tmCap').textContent = tmRun ? '진행 중 · 시간을 더하거나 뺄 수 있어요' : '숫자를 누르면 시간을 직접 입력할 수 있어요';
+  $('tmDisp').classList.toggle('editable', !tmRun);
 }
 $('tmStart').onclick = () => {
   audio();
@@ -454,6 +487,45 @@ document.querySelectorAll('#tmAdj .pill').forEach(b => b.onclick = () => {
   }
   setTmUI(); drawTM();
 });
+
+/* ---------- 타이머 직접 입력 (숫자판) ---------- */
+let padBuf = '';
+const padOpen = () => $('pad').classList.contains('on');
+function padParse() {
+  const d = padBuf.padStart(4, '0');
+  return { m: +d.slice(0, 2), s: +d.slice(2) };
+}
+function padDraw() {
+  const d = padBuf.padStart(4, '0'), lead = 4 - padBuf.length;   // 아직 안 친 자리는 흐리게
+  const ch = [...d].map((c, i) => i < lead ? `<span class="dim">${c}</span>` : c);
+  $('padShow').innerHTML = ch.slice(0, 2).join('') + (lead > 2 ? '<span class="dim">:</span>' : ':') + ch.slice(2).join('');
+}
+function padKey(k) {
+  if (k === 'del') padBuf = padBuf.slice(0, -1);
+  else if (padBuf.length < 4) padBuf = (padBuf + k).replace(/^0+/, '').slice(0, 4);
+  padDraw();
+}
+function openPad() {
+  if (tmRun || document.body.classList.contains('mini')) return;
+  padBuf = ''; padDraw(); $('pad').classList.add('on');
+}
+function closePad(ok) {
+  if (ok && padBuf) {
+    const { m, s } = padParse();
+    const total = Math.min(MAX, m * 60 + s);        // 90초처럼 넣어도 1:30으로 맞춰짐
+    if (total > 0) {
+      tmSet = tmLeft = total;
+      document.querySelectorAll('#tmPre .pill').forEach(x => x.classList.toggle('sel', +x.dataset.set === total));
+      setTmUI(); drawTM();
+    }
+  }
+  $('pad').classList.remove('on');
+}
+$('tmDisp').onclick = openPad;
+$('keys').querySelectorAll('button').forEach(b => b.onclick = () => padKey(b.dataset.k || b.textContent));
+$('padOk').onclick = () => closePad(true);
+$('padCancel').onclick = () => closePad(false);
+$('pad').onclick = e => { if (e.target.id === 'pad') closePad(false); };
 
 /* ---------- 알람 ---------- */
 let aH = 9, aM = 0, alarms = store.get('classAlarms', []);
@@ -514,6 +586,14 @@ if (api) {
 /* ---------- 키보드 ---------- */
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
+  if (padOpen()) {
+    e.preventDefault();
+    if (/^[0-9]$/.test(e.key)) padKey(e.key);
+    else if (e.key === 'Backspace') padKey('del');
+    else if (e.key === 'Enter') closePad(true);
+    else if (e.key === 'Escape') closePad(false);
+    return;
+  }
   if ($('ring').classList.contains('on')) { stopRing(); e.preventDefault(); return; }
   const cur = document.querySelector('main section.on').id, k = e.key.toLowerCase();
   if (e.code === 'Space') { e.preventDefault(); if (cur === 'stopwatch') $('swStart').click(); if (cur === 'timer') $('tmStart').click(); }
@@ -521,6 +601,7 @@ document.addEventListener('keydown', e => {
   if (k === 'l' && cur === 'stopwatch') $('swLap').click();
   if (k === 't') $('themeBtn').click();
   if (k === 'm') setMini(!mini);
+  if (cur === 'timer' && (e.key === 'Enter' || k === 'e') && !tmRun) { e.preventDefault(); openPad(); return; }
   if (cur === 'timer' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
     e.preventDefault(); document.querySelector(`#tmAdj [data-add="${e.key === 'ArrowUp' ? 60 : -60}"]`).click();
   }

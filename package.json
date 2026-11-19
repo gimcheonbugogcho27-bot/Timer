@@ -41,10 +41,10 @@
       "icon": "build/icon.png"
     },
     "portable": {
-      "artifactName": "우리반타이머-포터블.exe"
+      "artifactName": "ClassTimer-Portable.exe"
     },
     "nsis": {
-      "artifactName": "우리반타이머-설치.exe",
+      "artifactName": "ClassTimer-Setup.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     }

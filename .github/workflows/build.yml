@@ -105,16 +105,16 @@ jobs:
           cd apk/android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk ../../우리반타이머.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ../../ClassTimer.apk
 
       - name: Upload apk (Actions 탭에서 다운로드)
         uses: actions/upload-artifact@v4
         with:
           name: 우리반타이머-android
-          path: 우리반타이머.apk
+          path: ClassTimer.apk
 
       - name: Release (v로 시작하는 태그일 때)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: 우리반타이머.apk
+          files: ClassTimer.apk
